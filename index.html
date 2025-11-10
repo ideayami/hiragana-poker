@@ -650,7 +650,56 @@
                     });
                 });
             }
-            
+
+            bindEvents() {
+                const startBtn = document.getElementById('start-game-btn');
+                if (startBtn) startBtn.addEventListener('click', () => this.startGame());
+
+                const exchangeBtn = document.getElementById('exchange-btn');
+                if (exchangeBtn) exchangeBtn.addEventListener('click', () => this.exchangeCards());
+
+                const clearBtn = document.getElementById('clear-btn');
+                if (clearBtn) clearBtn.addEventListener('click', () => {
+                    this.selectedCards = [];
+                    this.selectedOrder = [];
+                    this.updateDisplay();
+                });
+
+                const submitBtn = document.getElementById('submit-btn');
+                if (submitBtn) submitBtn.addEventListener('click', async () => {
+                    const currentPlayer = this.getCurrentPlayer();
+                    const word = this.selectedOrder.map(i => currentPlayer.hand[i]).join('');
+                    if (await this.isValidWord(word)) {
+                        this.calculateScore(word);
+                        currentPlayer.hasPlayed = true;
+                    } else {
+                        this.showModal('エラー', '無効な単語です');
+                    }
+                });
+
+                const passBtn = document.getElementById('pass-btn');
+                if (passBtn) passBtn.addEventListener('click', () => this.pass());
+
+                const nextTurnBtn = document.getElementById('next-turn-btn');
+                if (nextTurnBtn) nextTurnBtn.addEventListener('click', () => this.nextTurn());
+
+                const restartBtn = document.getElementById('restart-btn');
+                if (restartBtn) restartBtn.addEventListener('click', () => location.reload());
+
+                const adminToggle = document.getElementById('admin-toggle');
+                if (adminToggle) adminToggle.addEventListener('click', () => {
+                    this.adminMode = !this.adminMode;
+                    const ind = document.getElementById('admin-indicator');
+                    if (ind) ind.style.display = this.adminMode ? 'block' : 'none';
+                });
+
+                const modalOk = document.getElementById('modal-ok');
+                if (modalOk) modalOk.addEventListener('click', () => {
+                    const m = document.getElementById('modal');
+                    if (m) m.style.display = 'none';
+                });
+            }
+
             startGame() {
                 this.players = [];
                 for (let i = 1; i <= 4; i++) {
@@ -998,3 +1047,207 @@
                 
                 const newCards = [];
                 for (let i = 0; i < this.selectedCards.length; i++) {
+                    const idx = this.selectedCards[i];
+                    if (this.deck.length > 0) {
+                        newCards.push(this.deck.pop());
+                    } else {
+                        newCards.push(null);
+                    }
+                }
+                
+                // 選択したカードを差し替え
+                for (let i = 0; i < this.selectedCards.length; i++) {
+                    const handIndex = this.selectedCards[i];
+                    const card = newCards[i];
+                    if (card !== null) {
+                        currentPlayer.hand[handIndex] = card;
+                    }
+                }
+                
+                currentPlayer.exchangeUsed = true;
+                this.selectedCards = [];
+                this.selectedOrder = [];
+                this.updateDisplay();
+                this.updateGameInfo();
+            }
+            
+            // 以降既存のメソッドは変更なし
+            pass() {
+                const currentPlayer = this.getCurrentPlayer();
+                
+                if (currentPlayer.hasPlayed) {
+                    this.showModal('エラー', 'すでにプレイ済みです');
+                    return;
+                }
+                
+                currentPlayer.hasPlayed = true;
+                currentPlayer.roundScore = 0;
+                currentPlayer.lastWord = '（パス）';
+                this.scoreBreakdown = [{ name: 'パス', points: 0 }];
+                this.showPlayerResult('（パス）');
+            }
+
+            nextTurn() {
+                // 次のプレイヤーへ
+                this.currentPlayerIndex++;
+                if (this.currentPlayerIndex >= this.players.length) {
+                    // 全員プレイ済みならラウンド終了
+                    this.playersFinishedRound++;
+                    if (this.round < this.maxRounds) {
+                        this.round++;
+                        this.startNewRound();
+                    } else {
+                        // ゲーム終了
+                        document.getElementById('game-area').style.display = 'none';
+                        document.getElementById('game-over').style.display = 'block';
+                        const winner = [...this.players].sort((a,b) => b.score - a.score)[0];
+                        document.getElementById('winner-announcement').textContent = `${winner.name}が勝ちました！`;
+                        document.getElementById('final-scores').textContent = this.players.map(p => `${p.name}: ${p.score}点`).join('\n');
+                    }
+                }
+                this.updateDisplay();
+                this.updatePlayersArea();
+                this.updateScoreboard();
+            }
+
+            showPlayerResult(word) {
+                const resultArea = document.getElementById('result-area');
+                const scoreBreakdownDiv = document.getElementById('score-breakdown');
+                scoreBreakdownDiv.innerHTML = '';
+
+                this.scoreBreakdown.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'score-item';
+                    div.style.background = this.getCurrentPlayer().color;
+                    div.style.color = 'white';
+                    div.innerHTML = `<h4>${item.name}</h4><div style="font-size: 24px; font-weight: bold;">+${item.points}pt</div>`;
+                    scoreBreakdownDiv.appendChild(div);
+                });
+
+                const totalDiv = document.createElement('div');
+                totalDiv.className = 'score-item';
+                totalDiv.style.background = this.getCurrentPlayer().color;
+                totalDiv.style.color = 'white';
+                totalDiv.innerHTML = `<h4>獲得得点</h4><div style="font-size: 24px; font-weight: bold;">${this.getCurrentPlayer().roundScore}pt</div>`;
+                scoreBreakdownDiv.appendChild(totalDiv);
+
+                resultArea.style.display = 'block';
+            }
+
+            calculateScore(word) {
+                const currentPlayer = this.getCurrentPlayer();
+                let score = 0;
+                const scoreBreakdown = [];
+
+                // 基本得点
+                score += 3;
+                scoreBreakdown.push({ name: '単語作成', points: 3 });
+
+                // 文字数ボーナス（既存ロジックを維持）
+                if (word.length >= 4) {
+                    const lengthBonus = word.length - 3;
+                    score += lengthBonus;
+                    scoreBreakdown.push({ name: `${word.length}文字ボーナス`, points: lengthBonus });
+                }
+
+                // 「ん」ボーナス（既存維持）
+                if (word.includes('ん')) {
+                    score += 1;
+                    scoreBreakdown.push({ name: '「ん」ボーナス', points: 1 });
+                }
+
+                // 選択された文字の枚数をカウントしてポーカー役を判定
+                const currentPlayerHand = currentPlayer.hand || [];
+                const selectedChars = this.selectedOrder.map(handIndex => currentPlayerHand[handIndex]);
+                const charCounts = {};
+                selectedChars.forEach(char => {
+                    charCounts[char] = (charCounts[char] || 0) + 1;
+                });
+
+                const counts = Object.values(charCounts).sort((a, b) => b - a);
+
+                // 役ごとの得点（ご指定のポイントに合わせる）
+                // ファイブカード（同一文字5枚）
+                if (counts[0] === 5) {
+                    score += 6;
+                    scoreBreakdown.push({ name: 'ファイブカード', points: 6 });
+                }
+                // フォーカード（同一文字4枚）
+                else if (counts[0] === 4) {
+                    score += 5;
+                    scoreBreakdown.push({ name: 'フォーカード', points: 5 });
+                }
+                // フルハウス（3枚 + 2枚）
+                else if (counts[0] === 3 && counts[1] === 2) {
+                    score += 4;
+                    scoreBreakdown.push({ name: 'フルハウス', points: 4 });
+                }
+                // スリーカード（同一文字3枚）
+                else if (counts[0] === 3) {
+                    score += 3;
+                    scoreBreakdown.push({ name: 'スリーカード', points: 3 });
+                }
+                // ツーペア（2枚 + 2枚）
+                else if (counts[0] === 2 && counts[1] === 2) {
+                    score += 2;
+                    scoreBreakdown.push({ name: 'ツーペア', points: 2 });
+                }
+                // ワンペア（同一文字2枚）
+                else if (counts[0] === 2) {
+                    score += 1;
+                    scoreBreakdown.push({ name: 'ワンペア', points: 1 });
+                }
+
+                // プレイヤーのスコアへ反映
+                currentPlayer.roundScore = score;
+                currentPlayer.score += score;
+                this.scoreBreakdown = scoreBreakdown;
+
+                // 結果表示（既存の UI 更新ロジックを踏襲）
+                const resultArea = document.getElementById('result-area');
+                const scoreBreakdownDiv = document.getElementById('score-breakdown');
+                scoreBreakdownDiv.innerHTML = '';
+
+                scoreBreakdown.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'score-item';
+                    div.style.background = currentPlayer.color;
+                    div.style.color = 'white';
+                    div.innerHTML = `<h4>${item.name}</h4><div style="font-size: 24px; font-weight: bold;">+${item.points}pt</div>`;
+                    scoreBreakdownDiv.appendChild(div);
+                });
+
+                const totalDiv = document.createElement('div');
+                totalDiv.className = 'score-item';
+                totalDiv.style.background = currentPlayer.color;
+                totalDiv.style.color = 'white';
+                totalDiv.innerHTML = `<h4>獲得得点</h4><div style="font-size: 24px; font-weight: bold;">${currentPlayer.roundScore}pt</div>`;
+                scoreBreakdownDiv.appendChild(totalDiv);
+
+                resultArea.style.display = 'block';
+                this.updatePlayersArea();
+                this.updateScoreboard();
+            }
+
+            showModal(title, message) {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-message').textContent = message;
+                document.getElementById('modal').style.display = 'block';
+            }
+
+            updateGameInfo() {
+                document.getElementById('round').textContent = `${this.round} / ${this.maxRounds}`;
+                document.getElementById('cards-left').textContent = this.deck.length;
+                const left = this.players.filter(p => !p.hasPlayed).length;
+                document.getElementById('players-left').textContent = left;
+            }
+
+            // ここでクラス終了
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            window.game = new MultiplayerKotobaPoker();
+        });
+    </script>
+</body>
+</html>
