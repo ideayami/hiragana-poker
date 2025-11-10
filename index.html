@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ことばポーカー - マルチプレイ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .game-setup {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .player-input-area {
+            margin: 20px 0;
+        }
+        
+        .player-input {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 10px 0;
+            align-items: center;
+        }
+        
+        .player-input input {
+            padding: 10px;
+            border: 2px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 16px;
+            width: 200px;
+        }
+        
+        .player-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .game-area {
+            display: none;
+        }
+        
+        .game-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .info-item {
+            text-align: center;
+        }
+        
+        .current-player-indicator {
+            background: linear-gradient(145deg, #48bb78, #38a169);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .players-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .player-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .player-card.active {
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+            transform: scale(1.05);
+        }
+        
+        .player-card.waiting {
+            opacity: 0.7;
+        }
+        
+        .player-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .player-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 14px;
+        }
+        
+        .hand-area {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .cards {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .card {
+            width: 60px;
+            height: 80px;
+            background: linear-gradient(145deg, #f0f0f0, #cacaca);
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        
+        .card.selected {
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+            border-color: #ff8c00;
+            transform: translateY(-10px);
+        }
+        
+        .selected-cards {
+            background: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            min-height: 60px;
+            border: 2px dashed #cbd5e0;
+        }
+        
+        .selected-cards h4 {
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+        
+        .selected-card-area {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            min-height: 40px;
+            align-items: center;
+        }
+        
+        .selected-card {
+            width: 50px;
+            height: 60px;
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+            border: 2px solid #ff8c00;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: move;
+            transition: all 0.3s ease;
+            user-select: none;
+            position: relative;
+        }
+        
+        .selected-card:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .selected-card.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+        
+        .word-input {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .word-display {
+            font-size: 32px;
+            font-weight: bold;
+            color: #4a5568;
+            margin: 10px 0;
+            min-height: 45px;
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px dashed #cbd5e0;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(145deg, #4299e1, #3182ce);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(145deg, #ed8936, #dd6b20);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(145deg, #48bb78, #38a169);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(145deg, #fc8181, #f56565);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .scoreboard {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .scoreboard h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .score-table th, .score-table td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .score-table th {
+            background: #f7fafc;
+            font-weight: bold;
+        }
+        
+        .score-table tr.winner {
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+        }
+        
+        .result-area {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .score-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .score-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .game-over {
+            background: linear-gradient(145deg, #48bb78, #38a169);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .winner-announcement {
+            font-size: 28px;
+            margin: 20px 0;
+        }
+        
+        .final-scores {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .admin-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(145deg, #805ad5, #6b46c1);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            z-index: 999;
+        }
+        
+        .admin-mode-indicator {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            background: #48bb78;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            z-index: 999;
+            display: none;
+        }
+        
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.2);
+        }
+        
+        .color-option.selected {
+            border-color: #333;
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="admin-toggle" id="admin-toggle">🎮 GM</button>
+        <div class="admin-mode-indicator" id="admin-indicator">ゲームマスターモード</div>
+        
+        <div class="header">
+            <h1>🎮 ことばポーカー - マルチプレイ</h1>
+            <p>みんなでひらがなカードで単語を作って競争しよう！</p>
+        </div>
+        
+        <div class="game-setup" id="game-setup">
+            <h2>ゲーム設定</h2>
+            <div class="player-input-area">
+                <h3>プレイヤー登録（2〜4人）</h3>
+                <div id="player-inputs">
+                    <div class="player-input">
+                        <span>プレイヤー1:</span>
+                        <input type="text" id="player1" placeholder="名前を入力" value="プレイヤー1">
+                        <div class="color-picker" data-player="1">
+                            <div class="color-option selected" style="background: #4299e1" data-color="#4299e1"></div>
+                            <div class="color-option" style="background: #48bb78" data-color="#48bb78"></div>
+                            <div class="color-option" style="background: #ed8936" data-color="#ed8936"></div>
+                            <div class="color-option" style="background: #805ad5" data-color="#805ad5"></div>
+                        </div>
+                    </div>
+                    <div class="player-input">
+                        <span>プレイヤー2:</span>
+                        <input type="text" id="player2" placeholder="名前を入力" value="プレイヤー2">
+                        <div class="color-picker" data-player="2">
+                            <div class="color-option" style="background: #4299e1" data-color="#4299e1"></div>
+                            <div class="color-option selected" style="background: #48bb78" data-color="#48bb78"></div>
+                            <div class="color-option" style="background: #ed8936" data-color="#ed8936"></div>
+                            <div class="color-option" style="background: #805ad5" data-color="#805ad5"></div>
+                        </div>
+                    </div>
+                    <div class="player-input">
+                        <span>プレイヤー3:</span>
+                        <input type="text" id="player3" placeholder="名前を入力（任意）">
+                        <div class="color-picker" data-player="3">
+                            <div class="color-option" style="background: #4299e1" data-color="#4299e1"></div>
+                            <div class="color-option" style="background: #48bb78" data-color="#48bb78"></div>
+                            <div class="color-option selected" style="background: #ed8936" data-color="#ed8936"></div>
+                            <div class="color-option" style="background: #805ad5" data-color="#805ad5"></div>
+                        </div>
+                    </div>
+                    <div class="player-input">
+                        <span>プレイヤー4:</span>
+                        <input type="text" id="player4" placeholder="名前を入力（任意）">
+                        <div class="color-picker" data-player="4">
+                            <div class="color-option" style="background: #4299e1" data-color="#4299e1"></div>
+                            <div class="color-option" style="background: #48bb78" data-color="#48bb78"></div>
+                            <div class="color-option" style="background: #ed8936" data-color="#ed8936"></div>
+                            <div class="color-option selected" style="background: #805ad5" data-color="#805ad5"></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 30px;">
+                    <button class="btn btn-success" id="start-game-btn" style="font-size: 20px; padding: 15px 40px;">ゲーム開始</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-area" id="game-area">
+            <div class="game-info">
+                <div class="info-item">
+                    <h3>ラウンド</h3>
+                    <div id="round">1 / 3</div>
+                </div>
+                <div class="info-item">
+                    <h3>残りカード</h3>
+                    <div id="cards-left">188</div>
+                </div>
+                <div class="info-item">
+                    <h3>残りプレイヤー</h3>
+                    <div id="players-left">2</div>
+                </div>
+            </div>
+            
+            <div class="current-player-indicator" id="current-player-indicator">
+                プレイヤー1のターン
+            </div>
+            
+            <div class="players-area" id="players-area"></div>
+            
+            <div class="hand-area" id="hand-area">
+                <h3>手札（クリックして選択）</h3>
+                <div class="cards" id="hand"></div>
+                
+                <div class="word-input">
+                    <div class="selected-cards">
+                        <h4>選択したカード（ドラッグして順番変更）</h4>
+                        <div class="selected-card-area" id="selected-card-area">
+                            <div style="color: #718096; font-style: italic;">カードを選択してください</div>
+                        </div>
+                    </div>
+                    <h4>作った単語</h4>
+                    <div class="word-display" id="word-display">カードを選んで単語を作ろう</div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-secondary" id="exchange-btn">選択したカードを交換</button>
+                    <button class="btn btn-primary" id="clear-btn">選択クリア</button>
+                    <button class="btn btn-success" id="submit-btn" disabled>単語を提出</button>
+                    <button class="btn btn-danger" id="pass-btn">パス</button>
+                </div>
+            </div>
+            
+            <div class="scoreboard" id="scoreboard">
+                <h3>📊 スコアボード</h3>
+                <table class="score-table" id="score-table">
+                    <thead>
+                        <tr>
+                            <th>プレイヤー</th>
+                            <th>得点</th>
+                            <th>最後の単語</th>
+                        </tr>
+                    </thead>
+                    <tbody id="score-tbody"></tbody>
+                </table>
+            </div>
+            
+            <div class="result-area" id="result-area" style="display: none;">
+                <h3>プレイヤーの結果</h3>
+                <div class="score-breakdown" id="score-breakdown"></div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn btn-primary" id="next-turn-btn">次のプレイヤーへ</button>
+                </div>
+            </div>
+            
+            <div class="game-over" id="game-over" style="display: none;">
+                <h2>🎉 ゲーム終了！</h2>
+                <div class="winner-announcement" id="winner-announcement"></div>
+                <div class="final-scores" id="final-scores"></div>
+                <button class="btn btn-primary" id="restart-btn" style="margin-top: 20px;">もう一度プレイ</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <button class="btn btn-primary" id="modal-ok">OK</button>
+        </div>
+    </div>
+    
+    <div class="modal" id="admin-modal">
+        <div class="modal-content">
+            <h3>🎮 ゲームマスター判定</h3>
+            <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <h4>単語: <span id="admin-word"></span></h4>
+                <p>プレイヤー: <span id="admin-player"></span></p>
+                <p>この単語は辞書に登録されていませんが、有効な日本語として認めますか？</p>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-success" id="admin-approve">✅ 承認</button>
+                <button class="btn btn-secondary" id="admin-reject">❌ 却下</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class MultiplayerKotobaPoker {
+            constructor() {
+                this.hiragana = [
+                    'あ', 'い', 'う', 'え', 'お',
+                    'か', 'き', 'く', 'け', 'こ',
+                    'さ', 'し', 'す', 'せ', 'そ',
+                    'た', 'ち', 'つ', 'て', 'と',
+                    'な', 'に', 'ぬ', 'ね', 'の',
+                    'は', 'ひ', 'ふ', 'へ', 'ほ',
+                    'ま', 'み', 'む', 'め', 'も',
+                    'や', 'ゆ', 'よ',
+                    'ら', 'り', 'る', 'れ', 'ろ',
+                    'わ', 'を', 'ん'
+                ];
+                
+                this.players = [];
+                this.currentPlayerIndex = 0;
+                this.deck = [];
+                this.selectedCards = [];
+                this.selectedOrder = [];
+                this.round = 1;
+                this.maxRounds = 3;
+                this.adminMode = false;
+                this.approvedWords = [];
+                this.gameStarted = false;
+                this.playersFinishedRound = 0;
+                
+                this.bindEvents();
+                this.initColorPickers();
+            }
+            
+            initColorPickers() {
+                document.querySelectorAll('.color-picker').forEach(picker => {
+                    picker.querySelectorAll('.color-option').forEach(option => {
+                        option.addEventListener('click', (e) => {
+                            picker.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+                            e.target.classList.add('selected');
+                        });
+                    });
+                });
+            }
+            
+            startGame() {
+                this.players = [];
+                for (let i = 1; i <= 4; i++) {
+                    const nameInput = document.getElementById(`player${i}`);
+                    if (nameInput.value.trim()) {
+                        const colorPicker = document.querySelector(`.color-picker[data-player="${i}"]`);
+                        const selectedColor = colorPicker.querySelector('.color-option.selected').dataset.color;
+                        this.players.push({
+                            name: nameInput.value.trim(),
+                            color: selectedColor,
+                            score: 0,
+                            hand: [],
+                            exchangeUsed: false,
+                            lastWord: '',
+                            roundScore: 0,
+                            hasPlayed: false
+                        });
+                    }
+                }
+                
+                if (this.players.length < 2) {
+                    this.showModal('エラー', '最低2人のプレイヤーが必要です');
+                    return;
+                }
+                
+                document.getElementById('game-setup').style.display = 'none';
+                document.getElementById('game-area').style.display = 'block';
+                
+                this.gameStarted = true;
+                this.initDeck();
+                this.startNewRound();
+            }
+            
+            initDeck() {
+                this.deck = [];
+                for (let char of this.hiragana) {
+                    for (let i = 0; i < 4; i++) {
+                        this.deck.push(char);
+                    }
+                }
+                this.shuffleDeck();
+            }
+            
+            shuffleDeck() {
+                for (let i = this.deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+                }
+            }
+            
+            startNewRound() {
+                this.playersFinishedRound = 0;
+                this.currentPlayerIndex = 0;
+                
+                this.players.forEach(player => {
+                    player.hand = [];
+                    for (let i = 0; i < 5; i++) {
+                        if (this.deck.length > 0) {
+                            player.hand.push(this.deck.pop());
+                        }
+                    }
+                    player.exchangeUsed = false;
+                    player.roundScore = 0;
+                    player.hasPlayed = false;
+                });
+                
+                document.getElementById('result-area').style.display = 'none';
+                document.getElementById('game-over').style.display = 'none';
+                
+                this.updateDisplay();
+                this.updateGameInfo();
+                this.updatePlayersArea();
+                this.updateScoreboard();
+            }
+            
+            getCurrentPlayer() {
+                return this.players[this.currentPlayerIndex];
+            }
+            
+            updateDisplay() {
+                const currentPlayer = this.getCurrentPlayer();
+                const handElement = document.getElementById('hand');
+                handElement.innerHTML = '';
+                
+                currentPlayer.hand.forEach((char, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.textContent = char;
+                    card.dataset.index = index;
+                    
+                    if (this.selectedCards.includes(index)) {
+                        card.classList.add('selected');
+                    }
+                    
+                    card.addEventListener('click', () => this.toggleCard(index));
+                    handElement.appendChild(card);
+                });
+                
+                this.updateSelectedCardsDisplay();
+                this.updateWordDisplay();
+                this.updateButtons();
+                this.updateCurrentPlayerIndicator();
+            }
+            
+            updateSelectedCardsDisplay() {
+                const selectedArea = document.getElementById('selected-card-area');
+                selectedArea.innerHTML = '';
+                
+                if (this.selectedOrder.length === 0) {
+                    selectedArea.innerHTML = '<div style="color: #718096; font-style: italic;">カードを選択してください</div>';
+                    return;
+                }
+                
+                const currentPlayer = this.getCurrentPlayer();
+                this.selectedOrder.forEach((handIndex, orderIndex) => {
+                    const char = currentPlayer.hand[handIndex];
+                    
+                    const selectedCard = document.createElement('div');
+                    selectedCard.className = 'selected-card';
+                    selectedCard.textContent = char;
+                    selectedCard.draggable = true;
+                    selectedCard.dataset.orderIndex = orderIndex;
+                    
+                    selectedCard.ondragstart = (e) => {
+                        this.draggedIndex = orderIndex;
+                        selectedCard.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                    };
+                    
+                    selectedCard.ondragend = () => {
+                        selectedCard.classList.remove('dragging');
+                        this.draggedIndex = null;
+                    };
+                    
+                    selectedCard.ondragover = (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                    };
+                    
+                    selectedCard.ondrop = (e) => {
+                        e.preventDefault();
+                        const targetIndex = parseInt(selectedCard.dataset.orderIndex);
+                        if (this.draggedIndex !== null && this.draggedIndex !== targetIndex) {
+                            this.reorderSelectedCards(this.draggedIndex, targetIndex);
+                        }
+                    };
+                    
+                    selectedCard.onclick = () => {
+                        const handIndex = this.selectedOrder[orderIndex];
+                        this.toggleCard(handIndex);
+                    };
+                    
+                    selectedArea.appendChild(selectedCard);
+                });
+            }
+            
+            reorderSelectedCards(fromIndex, toIndex) {
+                const item = this.selectedOrder.splice(fromIndex, 1)[0];
+                this.selectedOrder.splice(toIndex, 0, item);
+                this.updateSelectedCardsDisplay();
+                this.updateWordDisplay();
+                this.updateButtons();
+            }
+            
+            toggleCard(index) {
+                const cardIndex = this.selectedCards.indexOf(index);
+                if (cardIndex > -1) {
+                    this.selectedCards.splice(cardIndex, 1);
+                    const orderIndex = this.selectedOrder.indexOf(index);
+                    if (orderIndex > -1) {
+                        this.selectedOrder.splice(orderIndex, 1);
+                    }
+                } else {
+                    this.selectedCards.push(index);
+                    this.selectedOrder.push(index);
+                }
+                this.updateDisplay();
+            }
+            
+            updateWordDisplay() {
+                const wordDisplay = document.getElementById('word-display');
+                const currentPlayer = this.getCurrentPlayer();
+                if (this.selectedOrder.length === 0) {
+                    wordDisplay.textContent = 'カードを選んで単語を作ろう';
+                } else {
+                    const word = this.selectedOrder.map(handIndex => currentPlayer.hand[handIndex]).join('');
+                    wordDisplay.textContent = word;
+                }
+            }
+            
+            updateCurrentPlayerIndicator() {
+                const currentPlayer = this.getCurrentPlayer();
+                const indicator = document.getElementById('current-player-indicator');
+                indicator.textContent = `${currentPlayer.name}のターン`;
+                indicator.style.background = `linear-gradient(145deg, ${currentPlayer.color}, ${currentPlayer.color})`;
+            }
+            
+            updatePlayersArea() {
+                const playersArea = document.getElementById('players-area');
+                playersArea.innerHTML = '';
+                
+                this.players.forEach((player, index) => {
+                    const playerCard = document.createElement('div');
+                    playerCard.className = 'player-card';
+                    
+                    if (index === this.currentPlayerIndex && !player.hasPlayed) {
+                        playerCard.classList.add('active');
+                    } else if (player.hasPlayed) {
+                        playerCard.classList.add('waiting');
+                    }
+                    
+                    playerCard.innerHTML = `
+                        <div class="player-name" style="color: ${player.color}">
+                            ${player.name} ${player.hasPlayed ? '✅' : ''}
+                        </div>
+                        <div class="player-stats">
+                            <div>総得点: ${player.score}</div>
+                            <div>ラウンド得点: ${player.roundScore}</div>
+                        </div>
+                    `;
+                    
+                    playersArea.appendChild(playerCard);
+                });
+            }
+            
+            updateScoreboard() {
+                const tbody = document.getElementById('score-tbody');
+                tbody.innerHTML = '';
+                
+                const sortedPlayers = [...this.players].sort((a, b) => b.score - a.score);
+                
+                sortedPlayers.forEach((player, index) => {
+                    const row = document.createElement('tr');
+                    if (index === 0 && this.round > 1) {
+                        row.classList.add('winner');
+                    }
+                    
+                    row.innerHTML = `
+                        <td style="color: ${player.color}; font-weight: bold;">${player.name}</td>
+                        <td>${player.score}点</td>
+                        <td>${player.lastWord || '-'}</td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+            }
+            
+            async isValidWord(word) {
+                if (word.length < 2) return false;
+                
+                const hiraganaRegex = /^[あ-ん]+$/;
+                if (!hiraganaRegex.test(word)) return false;
+                
+                if (this.approvedWords.includes(word)) return true;
+                
+                const basicWords = [
+                    'あり', 'いぬ', 'うま', 'えき', 'おか', 'あめ', 'あき', 'いえ', 'うみ', 'えん',
+                    'かき', 'きつね', 'くま', 'けんか', 'こども', 'かみ', 'きのう', 'くつ', 'けが', 'こえ',
+                    'さかな', 'しんぶん', 'すし', 'せんせい', 'そら', 'さくら', 'しお', 'すいか', 'せき', 'そば',
+                    'たまご', 'ちず', 'つき', 'てがみ', 'とり', 'たこ', 'ちち', 'つめ', 'てら', 'とけい',
+                    'なつ', 'にわ', 'ぬいぐるみ', 'ねこ', 'のみもの', 'なべ', 'にく', 'ぬま', 'ねずみ', 'のり',
+                    'はな', 'ひこうき', 'ふね', 'へや', 'ほん', 'はし', 'ひ', 'ふゆ', 'へび', 'ほし',
+                    'まち', 'みず', 'むし', 'めがね', 'もり', 'まめ', 'みみ', 'むね', 'め', 'もも',
+                    'やま', 'ゆき', 'よる', 'やき', 'ゆめ', 'よこ',
+                    'らいねん', 'りんご', 'るすばん', 'れいぞうこ', 'ろうそく', 'らくだ', 'りす', 'るーる', 'れもん', 'ろーる',
+                    'わたし', 'わに', 'ん',
+                    'がっこう', 'じかん', 'でんわ', 'ばん', 'ぱん', 'びょういん', 'ぷーる', 'べんきょう', 'ぽすと'
+                ];
+                
+                if (basicWords.includes(word)) return true;
+                
+                if (this.adminMode) {
+                    return await this.requestAdminApproval(word);
+                }
+                
+                return false;
+            }
+            
+            async requestAdminApproval(word) {
+                return new Promise((resolve) => {
+                    const currentPlayer = this.getCurrentPlayer();
+                    document.getElementById('admin-word').textContent = word;
+                    document.getElementById('admin-player').textContent = currentPlayer.name;
+                    document.getElementById('admin-modal').style.display = 'block';
+                    
+                    const approveHandler = () => {
+                        this.approvedWords.push(word);
+                        document.getElementById('admin-modal').style.display = 'none';
+                        document.getElementById('admin-approve').removeEventListener('click', approveHandler);
+                        document.getElementById('admin-reject').removeEventListener('click', rejectHandler);
+                        resolve(true);
+                    };
+                    
+                    const rejectHandler = () => {
+                        document.getElementById('admin-modal').style.display = 'none';
+                        document.getElementById('admin-approve').removeEventListener('click', approveHandler);
+                        document.getElementById('admin-reject').removeEventListener('click', rejectHandler);
+                        resolve(false);
+                    };
+                    
+                    document.getElementById('admin-approve').addEventListener('click', approveHandler);
+                    document.getElementById('admin-reject').addEventListener('click', rejectHandler);
+                });
+            }
+            
+            async updateButtons() {
+                const currentPlayer = this.getCurrentPlayer();
+                const exchangeBtn = document.getElementById('exchange-btn');
+                const submitBtn = document.getElementById('submit-btn');
+                const passBtn = document.getElementById('pass-btn');
+                
+                if (exchangeBtn) {
+                    exchangeBtn.disabled = currentPlayer.exchangeUsed || currentPlayer.hasPlayed;
+                    exchangeBtn.textContent = currentPlayer.exchangeUsed ? '交換済み' : '選択したカードを交換';
+                }
+                
+                if (submitBtn) {
+                    const word = this.selectedOrder.map(handIndex => currentPlayer.hand[handIndex]).join('');
+                    const isValid = await this.isValidWord(word);
+                    submitBtn.disabled = currentPlayer.hasPlayed || this.selectedOrder.length === 0 || !isValid;
+                }
+                
+                if (passBtn) {
+                    passBtn.disabled = currentPlayer.hasPlayed;
+                }
+            }
+            
+            exchangeCards() {
+                const currentPlayer = this.getCurrentPlayer();
+                
+                if (currentPlayer.hasPlayed) {
+                    this.showModal('エラー', 'すでにプレイ済みです');
+                    return;
+                }
+                
+                if (currentPlayer.exchangeUsed) {
+                    this.showModal('エラー', 'カード交換は1ラウンドに1回までです');
+                    return;
+                }
+                
+                if (this.selectedCards.length === 0) {
+                    this.showModal('エラー', 'カードを選択してください');
+                    return;
+                }
+                
+                const newCards = [];
+                for (let i = 0; i < this.selectedCards.length; i++) {
+                    if (this.deck.length > 0) {
+                        newCards.push(this.deck.pop());
+                    }
+                }
+                
+                this.selectedCards.forEach((index, i) => {
+                    if (i < newCards.length) {
+                        currentPlayer.hand[index] = newCards[i];
+                    }
+                });
+                
+                this.selectedCards = [];
+                this.selectedOrder = [];
+                currentPlayer.exchangeUsed = true;
+                this.updateDisplay();
+                this.updateGameInfo();
+                
+                this.showModal('交換完了', `${newCards.length}枚のカードを交換しました`);
+            }
+            
+            async submitWord() {
+                const currentPlayer = this.getCurrentPlayer();
+                
+                if (currentPlayer.hasPlayed) {
+                    this.showModal('エラー', 'すでにプレイ済みです');
+                    return;
+                }
+                
+                const word = this.selectedOrder.map(handIndex => currentPlayer.hand[handIndex]).join('');
+                const isValid = await this.isValidWord(word);
+                if (!isValid) {
+                    this.showModal('エラー', '有効な単語ではありません');
+                    return;
+                }
+                
+                this.calculateScore(word);
+                currentPlayer.hasPlayed = true;
+                currentPlayer.lastWord = word;
+                this.showPlayerResult(word);
+            }
+            
+            calculateScore(word) {
+                const currentPlayer = this.getCurrentPlayer();
+                let score = 0;
+                const scoreBreakdown = [];
+                
+                score += 3;
+                scoreBreakdown.push({ name: '単語作成', points: 3 });
+                
+                if (word.length >= 4) {
+                    const lengthBonus = word.length - 3;
+                    score += lengthBonus;
+                    scoreBreakdown.push({ name: `${word.length}文字ボーナス`, points: lengthBonus });
+                }
+                
+                if (word.includes('ん')) {
+                    score += 1;
+                    scoreBreakdown.push({ name: '「ん」ボーナス', points: 1 });
+                }
+                
+                const selectedChars = this.selectedOrder.map(handIndex => currentPlayer.hand[handIndex]);
+                const charCounts = {};
+                selectedChars.forEach(char => {
+                    charCounts[char] = (charCounts[char] || 0) + 1;
+                });
+                
+                const counts = Object.values(charCounts).sort((a, b) => b - a);
+                
+                if (counts[0] === 4) {
+                    score += 10;
+                    scoreBreakdown.push({ name: '4カード', points: 10 });
+                } else if (counts[0] === 3 && counts[1] === 2) {
+                    score += 8;
+                    scoreBreakdown.push({ name: 'フルハウス', points: 8 });
+                } else if (counts[0] === 3) {
+                    score += 5;
+                    scoreBreakdown.push({ name: '3カード', points: 5 });
+                } else if (counts[0] === 2 && counts[1] === 2) {
+                    score += 4;
+                    scoreBreakdown.push({ name: 'ツーペア', points: 4 });
+                } else if (counts[0] === 2) {
+                    score += 2;
+                    scoreBreakdown.push({ name: 'ワンペア', points: 2 });
+                }
+                
+                currentPlayer.roundScore = score;
+                currentPlayer.score += score;
+                this.scoreBreakdown = scoreBreakdown;
+            }
+            
+            showPlayerResult(word) {
+                const currentPlayer = this.getCurrentPlayer();
+                const resultArea = document.getElementById('result-area');
+                const scoreBreakdown = document.getElementById('score-breakdown');
+                
+                let wordDisplay = word;
+                if (this.approvedWords.includes(word)) {
+                    wordDisplay += ' 🎮';
+                }
+                
+                scoreBreakdown.innerHTML = `
+                    <div class="score-item">
+                        <h4>${currentPlayer.name}</h4>
+                        <div style="color: ${currentPlayer.color}; font-size: 24px; font-weight: bold;">${wordDisplay}</div>
+                    </div>
+                `;
+                
+                this.scoreBreakdown.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'score-item';
+                    div.innerHTML = `
+                        <h4>${item.name}</h4>
+                        <div style="font-size: 20px; color: #38a169;">+${item.points}pt</div>
+                    `;
+                    scoreBreakdown.appendChild(div);
+                });
+                
+                const totalDiv = document.createElement('div');
+                totalDiv.className = 'score-item';
+                totalDiv.style.background = currentPlayer.color;
+                totalDiv.style.color = 'white';
+                totalDiv.innerHTML = `
+                    <h4>獲得得点</h4>
+                    <div style="font-size: 24px; font-weight: bold;">${currentPlayer.roundScore}pt</div>
+                `;
+                scoreBreakdown.appendChild(totalDiv);
+                
+                resultArea.style.display = 'block';
+                this.updatePlayersArea();
+                this.updateScoreboard();
+            }
+            
+            pass() {
+                const currentPlayer = this.getCurrentPlayer();
+                
+                if (currentPlayer.hasPlayed) {
+                    this.showModal('エラー', 'すでにプレイ済みです');
+                    return;
+                }
+                
+                currentPlayer.hasPlayed = true;
+                currentPlayer.roundScore = 0;
+                currentPlayer.lastWord = '（パス）';
+                this.scoreBreakdown = [{ name: 'パス', points: 0 }];
+                this.showPlayerResult('（パス）');
+            }
+            
+            nextTurn() {
+                this.playersFinishedRound++;
+                this.selectedCards = [];
+                this.selectedOrder = [];
+                
+                document.getElementById('result-area').style.display = 'none';
+                
+                if (this.playersFinishedRound >= this.players.length) {
+                    this.nextRound();
+                } else {
+                    this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+                    while (this.getCurrentPlayer().hasPlayed) {
+                        this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+                    }
+                    this.updateDisplay();
+                    this.updatePlayersArea();
+                }
+            }
+            
+            nextRound() {
+                this.round++;
+                if (this.round > this.maxRounds) {
+                    this.endGame();
+                } else {
+                    this.startNewRound();
+                }
+            }
+            
+            endGame() {
+                const gameOver = document.getElementById('game-over');
+                const winnerAnnouncement = document.getElementById('winner-announcement');
+                const finalScores = document.getElementById('final-scores');
+                
+                const sortedPlayers = [...this.players].sort((a, b) => b.score - a.score);
+                const winner = sortedPlayers[0];
+                
+                winnerAnnouncement.innerHTML = `
+                    🏆 優勝: <span style="color: ${winner.color}">${winner.name}</span> - ${winner.score}点
+                `;
+                
+                let scoresHTML = '<h3>最終順位</h3>';
+                sortedPlayers.forEach((player, index) => {
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}位`;
+                    scoresHTML += `
+                        <div style="margin: 10px 0;">
+                            ${medal} <span style="color: ${player.color}; font-weight: bold;">${player.name}</span>: ${player.score}点
+                        </div>
+                    `;
+                });
+                finalScores.innerHTML = scoresHTML;
+                
+                gameOver.style.display = 'block';
+            }
+            
+            restart() {
+                this.round = 1;
+                this.currentPlayerIndex = 0;
+                this.playersFinishedRound = 0;
+                this.players.forEach(player => {
+                    player.score = 0;
+                    player.lastWord = '';
+                    player.roundScore = 0;
+                });
+                this.initDeck();
+                this.startNewRound();
+            }
+            
+            updateGameInfo() {
+                document.getElementById('round').textContent = `${this.round} / ${this.maxRounds}`;
+                document.getElementById('cards-left').textContent = this.deck.length;
+                const playersLeft = this.players.filter(p => !p.hasPlayed).length;
+                document.getElementById('players-left').textContent = playersLeft;
+            }
+            
+            showModal(title, message) {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-message').textContent = message;
+                document.getElementById('modal').style.display = 'block';
+            }
+            
+            hideModal() {
+                document.getElementById('modal').style.display = 'none';
+            }
+            
+            toggleAdminMode() {
+                this.adminMode = !this.adminMode;
+                const indicator = document.getElementById('admin-indicator');
+                const toggle = document.getElementById('admin-toggle');
+                
+                if (this.adminMode) {
+                    indicator.style.display = 'block';
+                    toggle.textContent = '🎮 GM ON';
+                    toggle.style.background = 'linear-gradient(145deg, #48bb78, #38a169)';
+                } else {
+                    indicator.style.display = 'none';
+                    toggle.textContent = '🎮 GM';
+                    toggle.style.background = 'linear-gradient(145deg, #805ad5, #6b46c1)';
+                }
+            }
+            
+            bindEvents() {
+                document.getElementById('start-game-btn').onclick = () => this.startGame();
+                document.getElementById('exchange-btn').onclick = () => this.exchangeCards();
+                document.getElementById('clear-btn').onclick = () => {
+                    this.selectedCards = [];
+                    this.selectedOrder = [];
+                    this.updateDisplay();
+                };
+                document.getElementById('submit-btn').onclick = () => this.submitWord();
+                document.getElementById('pass-btn').onclick = () => this.pass();
+                document.getElementById('next-turn-btn').onclick = () => this.nextTurn();
+                document.getElementById('restart-btn').onclick = () => this.restart();
+                document.getElementById('modal-ok').onclick = () => this.hideModal();
+                document.getElementById('admin-toggle').onclick = () => this.toggleAdminMode();
+            }
+        }
+        
+        window.onload = function() {
+            new MultiplayerKotobaPoker();
+        };
+    </script>
+</body>
+</html>
